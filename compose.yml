@@ -1,0 +1,150 @@
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 30s
+
+services:
+  # FastAPI Backend
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      # Core services
+      QDRANT_URL: http://qdrant:6333
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+
+      # LLM backends (flexible)
+      LLM_BACKEND: ${LLM_BACKEND:-lm-studio}
+      LM_STUDIO_URL: http://host.docker.internal:1234/v1
+      LM_STUDIO_MODEL: ${LM_STUDIO_MODEL:-phi-3-mini-4k-instruct}
+      OLLAMA_URL: http://ollama:11434/v1
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-phi3}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      # Auth
+      API_SHARED_SECRET: ${API_SHARED_SECRET:-change-me-in-production}
+
+      # Misc
+      PYTHONUNBUFFERED: "1"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app:cached
+    depends_on:
+      qdrant:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.8.4
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__STORAGE__WAL_MEMORY_LIMIT: 104857600
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+
+  # MLflow Experiment Tracking
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.2
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+
+  # n8n Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://n8n:5678
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_USER_MANAGEMENT_DISABLED: ${N8N_USER_MANAGEMENT_DISABLED:-true}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Ollama LLM Server (optional, for production)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Uncomment for GPU support (Linux with NVIDIA)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+    # Auto-pull model on startup
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        sleep 5
+        ollama pull ${OLLAMA_MODEL:-phi3}
+        wait
+
+volumes:
+  qdrant_data:
+  minio_data:
+  mlflow_data:
+  n8n_data:
+  ollama_data:
+
+networks:
+  default:
+    name: mini-wiki-network
