@@ -5,8 +5,10 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    graphviz \
+    graphviz-dev \
+    gcc \
     curl \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for layer caching)
