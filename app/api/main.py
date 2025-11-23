@@ -181,6 +181,62 @@ async def ask_question(
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
+@app.post("/ask-graph", response_model=AskResponse, tags=["RAG"])
+async def ask_question_graph(
+        request: AskRequest,
+        api_key: str = Depends(verify_api_key)
+):
+    """
+    Ask a question using LangGraph RAG pipeline
+
+    **Week 3**: LangGraph implementation with state management
+    """
+    try:
+        logger.info(f"[Graph] Received query: {request.query[:50]}...")
+
+        # Import LangGraph
+        from rag.graph import get_rag_graph
+
+        # Get graph
+        graph = get_rag_graph()
+
+        # Run graph
+        result = graph.invoke({
+            "query": request.query,
+            "chunks": [],
+            "answer": "",
+            "use_rerank": request.use_rerank,
+            "metadata": {}
+        })
+
+        # Format citations
+        citations = [
+            Citation(
+                document=chunk["source"].split("/")[-1],
+                chunk_id=f"chunk_{idx}",
+                text=chunk["text"][:200] + "...",
+                score=chunk.get("rerank_score", chunk.get("score", 0.0))
+            )
+            for idx, chunk in enumerate(result["chunks"])
+        ]
+
+        return AskResponse(
+            answer=result["answer"],
+            citations=citations,
+            metadata={
+                **result.get("metadata", {}),
+                "query": request.query,
+                "top_k": request.top_k,
+                "use_rerank": request.use_rerank,
+                "llm_backend": settings.LLM_BACKEND,
+                "pipeline": "langgraph"
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in /ask-graph: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
 @app.post("/ingest", tags=["Admin"])
 async def ingest_documents(
         api_key: str = Depends(verify_api_key)
