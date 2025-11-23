@@ -123,6 +123,51 @@ async def health_check():
     )
 
 
+# @app.post("/ask", response_model=AskResponse, tags=["RAG"])
+# async def ask_question(
+#         request: AskRequest,
+#         api_key: str = Depends(verify_api_key)
+# ):
+#     """
+#     Ask a question and get an answer with citations
+#
+#     **Week 1**: Basic RAG implementation
+#     **Week 3+**: Add reranking support
+#     """
+#     try:
+#         logger.info(f"Received query: {request.query[:50]}...")
+#
+#         # TODO (Week 1): Implement RAG pipeline
+#         # 1. Embed query
+#         # 2. Retrieve chunks from Qdrant
+#         # 3. (Optional) Rerank chunks
+#         # 4. Generate answer with LLM
+#         # 5. Return with citations
+#
+#         # Placeholder response
+#         return AskResponse(
+#             answer="[Placeholder] RAG pipeline not yet implemented. See Week 1 for implementation.",
+#             citations=[
+#                 Citation(
+#                     document="example.md",
+#                     chunk_id="chunk_0",
+#                     text="This is a placeholder citation.",
+#                     score=0.95
+#                 )
+#             ],
+#             metadata={
+#                 "query": request.query,
+#                 "top_k": request.top_k,
+#                 "use_rerank": request.use_rerank,
+#                 "llm_backend": settings.LLM_BACKEND
+#             }
+#         )
+#
+#     except Exception as e:
+#         logger.error(f"Error in /ask: {str(e)}", exc_info=True)
+#         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
 @app.post("/ask", response_model=AskResponse, tags=["RAG"])
 async def ask_question(
         request: AskRequest,
@@ -137,29 +182,38 @@ async def ask_question(
     try:
         logger.info(f"Received query: {request.query[:50]}...")
 
-        # TODO (Week 1): Implement RAG pipeline
-        # 1. Embed query
-        # 2. Retrieve chunks from Qdrant
-        # 3. (Optional) Rerank chunks
-        # 4. Generate answer with LLM
-        # 5. Return with citations
+        # Import here to avoid startup delays
+        from rag.retrieval import get_retriever
+        from rag.generation import get_generator
 
-        # Placeholder response
+        # 1. Retrieve relevant chunks
+        retriever = get_retriever()
+        chunks = retriever.retrieve(request.query, top_k=request.top_k)
+
+        # 2. Generate answer
+        generator = get_generator()
+        answer = generator.generate(request.query, chunks)
+
+        # 3. Format citations
+        citations = [
+            Citation(
+                document=chunk["source"].split("/")[-1],  # Extract filename
+                chunk_id=f"chunk_{idx}",
+                text=chunk["text"][:200] + "...",  # Preview
+                score=chunk["score"]
+            )
+            for idx, chunk in enumerate(chunks)
+        ]
+
         return AskResponse(
-            answer="[Placeholder] RAG pipeline not yet implemented. See Week 1 for implementation.",
-            citations=[
-                Citation(
-                    document="example.md",
-                    chunk_id="chunk_0",
-                    text="This is a placeholder citation.",
-                    score=0.95
-                )
-            ],
+            answer=answer,
+            citations=citations,
             metadata={
                 "query": request.query,
                 "top_k": request.top_k,
                 "use_rerank": request.use_rerank,
-                "llm_backend": settings.LLM_BACKEND
+                "llm_backend": settings.LLM_BACKEND,
+                "chunks_retrieved": len(chunks)
             }
         )
 

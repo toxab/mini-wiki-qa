@@ -24,7 +24,7 @@ Built with **LangChain/LangGraph**, **FastAPI**, **Qdrant**, and **Ollama** on *
 | **LLM Orchestration** | LangChain → LangGraph |
 | **Vector DB** | Qdrant |
 | **LLM Backend** | LM Studio (dev) / Ollama (prod) |
-| **Embeddings** | nomic-embed-text |
+| **Embeddings** | sentence-transformers/all-MiniLM-L6-v2 |
 | **Experiment Tracking** | MLflow |
 | **Automation** | n8n |
 | **Storage** | MinIO |
@@ -81,6 +81,16 @@ make ui-all
 # Opens: API docs, Qdrant, MLflow, MinIO, n8n
 ```
 
+### 7. Setup Data
+
+#### Download SQuAD dataset
+``` 
+python scripts/download_squad.py
+```
+#### Ingest documents
+```
+docker compose run --rm api python -m rag.ingest
+```
 ---
 
 ## 📁 Project Structure
@@ -141,7 +151,7 @@ make test               # Test all services
 |---------|-----|-------------|
 | **API** | http://localhost:8000/docs | FastAPI Swagger UI |
 | **Qdrant** | http://localhost:6333/dashboard | Vector database |
-| **MLflow** | http://localhost:5000 | Experiment tracking |
+| **MLflow** | http://localhost:5001 | Experiment tracking |
 | **MinIO** | http://localhost:9001 | Object storage (admin/admin) |
 | **n8n** | http://localhost:5678 | Workflow automation |
 | **LM Studio** | http://localhost:1234 | LLM server (local) |
