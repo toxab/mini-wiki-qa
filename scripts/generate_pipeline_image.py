@@ -32,28 +32,30 @@ def main():
             'fontname': 'Arial',
             'fontsize': '11',
             'width': '2.5',
-            'height': '0.8'
+            'height': '0.8',
+            'fixedsize': 'false',
+            'labelloc': 'c'
         }
 
         # Add nodes with colors
         G.add_node('start', label='User Query', fillcolor='#e1f5e1', **node_style)
-        G.add_node('injection_guard', label='🛡️ Injection Guard\n(Security Check)', fillcolor='#ffe6e6', **node_style)
-        G.add_node('retrieve', label='🔍 Retrieve\n(Semantic Search)', fillcolor='#e6f3ff', **node_style)
-        G.add_node('rerank', label='🎯 Rerank\n(Cross-Encoder)', fillcolor='#fff5e6', **node_style)
-        G.add_node('generate', label='🤖 Generate\n(LLM Answer)', fillcolor='#f0e6ff', **node_style)
-        G.add_node('pii_scrubber', label='🔒 PII Scrubber\n(Privacy Filter)', fillcolor='#ffe6f0', **node_style)
+        G.add_node('injection', label='Injection Guard\n(Security Check)', fillcolor='#ffe6e6', **node_style)
+        G.add_node('retrieve', label='Retrieve\n(Semantic Search)', fillcolor='#e6f3ff', **node_style)
+        G.add_node('rerank', label='Rerank\n(Cross-Encoder)', fillcolor='#fff5e6', **node_style)
+        G.add_node('generate', label='Generate\n(LLM Answer)', fillcolor='#f0e6ff', **node_style)
+        G.add_node('scrubber', label='PII Scrubber\n(Privacy Filter)', fillcolor='#ffe6f0', **node_style)
         G.add_node('end', label='Final Answer', fillcolor='#e1f5e1', **node_style)
 
         # Add edges
-        G.add_edge('start', 'injection_guard', color='#333333', penwidth='2')
-        G.add_edge('injection_guard', 'retrieve', color='#4CAF50', penwidth='2', label='is_safe=True')
+        G.add_edge('start', 'injection', color='#333333', penwidth='2')
+        G.add_edge('injection', 'retrieve', color='#4CAF50', penwidth='2', label='is_safe=True')
         G.add_edge('retrieve', 'rerank', color='#2196F3', penwidth='2')
         G.add_edge('rerank', 'generate', color='#FF9800', penwidth='2')
-        G.add_edge('generate', 'pii_scrubber', color='#9C27B0', penwidth='2')
-        G.add_edge('pii_scrubber', 'end', color='#333333', penwidth='2')
+        G.add_edge('generate', 'scrubber', color='#9C27B0', penwidth='2')
+        G.add_edge('scrubber', 'end', color='#333333', penwidth='2')
 
         # Add blocked path
-        G.add_edge('injection_guard', 'end', color='#F44336', penwidth='2',
+        G.add_edge('injection', 'end', color='#F44336', penwidth='2',
                    label='is_safe=False\n(blocked)', style='dashed')
 
         # Save as PNG
