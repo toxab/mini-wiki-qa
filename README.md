@@ -32,9 +32,44 @@ Built with **LangChain/LangGraph**, **FastAPI**, **Qdrant**, and **Ollama** on *
 
 ---
 
+
+## 🏗️ Architecture
+
+### RAG Pipeline Flow
+
+![RAG Pipeline](data/rag_pipeline.png)
+
+**Pipeline Stages:**
+
+1. **🛡️ Injection Guard** — Blocks malicious prompts
+2. **🔍 Retrieve** — Semantic search in Qdrant (365 chunks)
+3. **🎯 Rerank** — Cross-encoder scoring (optional)
+4. **🤖 Generate** — LLM answer with context
+5. **🔒 PII Scrubber** — Remove sensitive data
+
+**Flow:**
+- ✅ Green path: Normal query flow
+- ❌ Red dashed: Blocked injection attempts
+
+### Generate Visualization
+
+To regenerate the pipeline diagram:
+```bash
+# Generate PNG/SVG/TXT visualizations
+docker compose exec api python /scripts/generate_pipeline_image.py
+docker compose exec api python /scripts/visualize_graph.py
+
+# Output files in data/:
+# - rag_pipeline.png (diagram)
+# - rag_pipeline.svg (scalable vector)
+# - rag_pipeline_visualization.txt (ASCII art + details)
+```
+---
+
+
 ## 📋 Prerequisites
 
-- **macOS M-series** (24GB RAM recommended)
+- **macOS M-series**
 - **Docker Desktop** (12GB RAM allocation)
 - **LM Studio** (GUI for development)
 - **Ollama** (CLI for production)

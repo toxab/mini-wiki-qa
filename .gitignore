@@ -48,6 +48,13 @@ data/documents/*.md
 data/golden_set/*.json
 !data/golden_set/.gitkeep
 
+# Allow visualization files
+!data/rag_pipeline.png
+!data/rag_pipeline.svg
+!data/rag_pipeline_visualization.txt
+
+
+
 # MLflow
 mlruns/
 mlartifacts/
