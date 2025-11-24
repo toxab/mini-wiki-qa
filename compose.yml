@@ -19,6 +19,10 @@ services:
       MINIO_SECRET_KEY: minioadmin
       MLFLOW_TRACKING_URI: http://mlflow:5000
 
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+
       # LLM backends (flexible)
       LLM_BACKEND: ${LLM_BACKEND:-lm-studio}
       LM_STUDIO_URL: http://host.docker.internal:1234/v1
@@ -84,19 +88,29 @@ services:
   # MLflow Experiment Tracking
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.10.2
-    command: >
-      mlflow server
-      --host 0.0.0.0
-      --port 5000
-      --backend-store-uri sqlite:///mlflow/mlflow.db
-      --default-artifact-root /mlflow/artifacts
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        pip install boto3
+        mlflow server \
+          --host 0.0.0.0 \
+          --port 5000 \
+          --backend-store-uri sqlite:///mlflow/mlflow.db \
+          --default-artifact-root s3://mlflow-artifacts/
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
     ports:
       - "5001:5000"
     volumes:
       - mlflow_data:/mlflow
+    depends_on:
+      minio:
+        condition: service_healthy
     healthcheck:
       <<: *healthcheck-defaults
-      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:5000/health || exit 1" ]
 
   # n8n Workflow Automation
   n8n:
