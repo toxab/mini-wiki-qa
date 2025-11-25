@@ -1,8 +1,7 @@
 # 🤖 Mini-Wiki Q&A
 
-Production-ready RAG (Retrieval-Augmented Generation) system for question-answering over 30-50 documents.
-
-Built with **LangChain/LangGraph**, **FastAPI**, **Qdrant**, and **Ollama** on **macOS Apple Silicon (M3)**.
+RAG system with semantic search, reranking, LangGraph orchestration, safety mechanisms, and MLflow experiment tracking.
+Built with **LangChain/LangGraph**, **FastAPI**, **Qdrant**, and **Ollama** on **macOS Apple Silicon **.
 
 ---
 
@@ -66,6 +65,15 @@ docker compose exec api python /scripts/visualize_graph.py
 ```
 ---
 
+### Safety Features
+- 🛡️ **Injection Guard** — Blocks prompt injection
+- 🔒 **PII Scrubber** — Removes sensitive data
+- 📊 **MLflow + MinIO** — Experiment tracking with S3 storage
+
+### Available Endpoints
+- `/ask` — LangChain pipeline
+- `/ask-graph` — LangGraph pipeline with safety layers
+
 
 ## 📋 Prerequisites
 
@@ -79,38 +87,32 @@ docker compose exec api python /scripts/visualize_graph.py
 
 ## 🚀 Quick Start
 
-### 1. Clone repository
-```bash
-git clone https://github.com/toxab/mini-wiki-qa.git
-cd mini-wiki-qa
-```
-
-### 2. Setup environment
+### 1. Setup environment
 ```bash
 make setup
 # Creates .env from .env.example, creates data directories
 ```
 
-### 3. Configure .env
+### 2. Configure .env
 ```bash
 # Edit .env and set:
 # - LLM_BACKEND (lm-studio for development, ollama for production)
 # - API_SHARED_SECRET (change default!)
 ```
 
-### 4. Start all services
+### 3. Start all services
 ```bash
 make all
 # Builds Docker images and starts all services
 ```
 
-### 5. Verify installation
+### 4. Verify installation
 ```bash
 make test
 # Checks: LM Studio, Ollama, API, Qdrant
 ```
 
-### 6. Open UIs
+### 5. Open UIs
 ```bash
 make ui-all
 # Opens: API docs, Qdrant, MLflow, MinIO, n8n
@@ -204,6 +206,16 @@ make test               # Test all services
 
 ---
 
+### Evaluation Results (SQuAD dataset)
+
+| Metric | Baseline | With Reranking |
+|--------|----------|----------------|
+| Recall@3 | 58% | 44% |
+| Recall@5 | 66% | 58% |
+
+*Note: Reranking shows lower metrics on duplicate-heavy datasets. Performance improves significantly on diverse document collections.*
+
+
 ## 🐛 Troubleshooting
 
 **LM Studio not responding:**
@@ -232,6 +244,25 @@ kill -9 [PID]
 ```
 
 ---
+
+## 🎯 Roadmap
+
+### Completed ✅
+- [x] Infrastructure setup (Docker, Qdrant, MLflow)
+- [x] Basic RAG with LangChain
+- [x] Evaluation metrics + golden set
+- [x] Reranking with cross-encoder
+- [x] LangGraph migration
+- [x] Safety layers (injection guard, PII scrubber)
+- [x] Pipeline visualization
+- [x] MinIO integration (S3-compatible storage)
+
+### Planned 🔮
+- [ ] n8n integrations (Telegram bot, Google Sheets)
+- [ ] Production deployment with Ollama
+- [ ] Fine-tuning (embeddings, reranker, LLM)
+- [ ] Multi-query expansion
+- [ ] Conversational memory
 
 ## 📝 License
 
